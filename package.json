@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "sync:catalog": "tsx scripts/sync-catalog.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
