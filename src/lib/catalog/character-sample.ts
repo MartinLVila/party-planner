@@ -64,12 +64,12 @@ export function characterSampleSource(): string {
   return `${SITE_API}/search/character + ${SITE_API}/character/equipment`;
 }
 
-export function decodeCharacterId(characterId: string): string {
+export function decodeCharacterId(characterId: string): string | null {
   if (!characterId.includes("%")) return characterId;
   try {
     return decodeURIComponent(characterId);
   } catch {
-    throw new CatalogRejected(`character id is not valid URL encoding: ${characterId}`);
+    return null;
   }
 }
 
@@ -103,8 +103,10 @@ export function highestLevelCharacters(
   const unique = new Map<string, CharacterSearchResult>();
   for (const result of results) {
     if (!allowed.has(result.pcId)) continue;
-    const key = `${result.serverId}:${decodeCharacterId(result.characterId)}`;
-    if (!unique.has(key)) unique.set(key, result);
+    const characterId = decodeCharacterId(result.characterId);
+    if (characterId === null) continue;
+    const key = `${result.serverId}:${characterId}`;
+    if (!unique.has(key)) unique.set(key, { ...result, characterId });
   }
   return [...unique.values()].sort((a, b) => b.level - a.level).slice(0, limit);
 }
@@ -137,7 +139,7 @@ export async function fetchCharacterSample(fetchJson: FetchJson): Promise<Charac
         const equipment = await fetchJson(
           siteUrl("/character/equipment", {
             serverId: character.serverId,
-            characterId: decodeCharacterId(character.characterId),
+            characterId: character.characterId,
           }),
           characterEquipmentSchema,
         );
@@ -183,6 +185,8 @@ export async function fetchCharacterSample(fetchJson: FetchJson): Promise<Charac
     perClass[sampledClass.name] = { characters, skills: classSkills.size, highestLevel };
   }
 
+  if (slotsByPos.size === 0) throw new CatalogRejected("sampled characters list no equipment slots");
+
   const sampledSkills = [...skillsById.values()];
   const slots = [...slotsByPos.entries()]
     .map(([slotPos, slotPosName]) => ({ slotPos, slotPosName }))
@@ -211,6 +215,11 @@ export async function writeCharacterSample(db: AnyDatabase, runId: number, sampl
         .from(skills)
         .where(eq(skills.runId, previousRunId));
       assertNotShrunk("skills", sample.skills.length, activeSkills);
+      const [{ value: activeSlots }] = await tx
+        .select({ value: count() })
+        .from(equipmentSlots)
+        .where(eq(equipmentSlots.runId, previousRunId));
+      assertNotShrunk("equipment slots", sample.slots.length, activeSlots);
     }
 
     for (const batch of chunk(sample.skills, INSERT_BATCH_SIZE)) {

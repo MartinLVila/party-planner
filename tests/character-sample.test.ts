@@ -117,6 +117,24 @@ describe("character sample", () => {
       await expectFirstSampleUntouched("Ranger");
     });
 
+    it("no sampled character has equipment", async () => {
+      const state = stateWithCharacters();
+      state.characters.forEach((character) => (character.slots = []));
+      const upstream = fakeUpstream(state);
+
+      await expect(syncCharacterSample(db, upstream.fetchJson)).rejects.toThrow("list no equipment slots");
+      await expectFirstSampleUntouched("equipment slots");
+    });
+
+    it("the slot list would shrink below 80% of the active one", async () => {
+      const state = stateWithCharacters();
+      state.characters.forEach((character) => (character.slots = [{ slotPos: 1, slotPosName: "MainHand" }]));
+      const upstream = fakeUpstream(state);
+
+      await expect(syncCharacterSample(db, upstream.fetchJson)).rejects.toThrow("equipment slots: 1 would replace 2");
+      await expectFirstSampleUntouched("equipment slots");
+    });
+
     it("a skill icon is not on the game CDN", async () => {
       const state = stateWithCharacters();
       state.characters[0].skills[0] = skill(1001, { icon: "https://evil.example/icon.png" });
@@ -151,9 +169,15 @@ describe("highestLevelCharacters", () => {
     );
 
     expect(picked.map((character) => `${character.characterId}@${character.level}`)).toEqual([
-      "top%3D@50",
+      "top=@50",
       "mid@45",
       "mid@44",
     ]);
+  });
+
+  it("skips an id with broken URL encoding instead of failing the sample", () => {
+    const picked = highestLevelCharacters([result("broken%E0%A4%A", 50), result("fine", 40)], [9], 3);
+
+    expect(picked.map((character) => character.characterId)).toEqual(["fine"]);
   });
 });
