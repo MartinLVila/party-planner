@@ -74,6 +74,7 @@ npm run dev
 | `npm run db:migrate` | Apply migrations to `DATABASE_URL` |
 | `npm run sync:catalog -- classes` | Sync the class list into `DATABASE_URL` |
 | `npm run sync:catalog -- items` | Sync grades, categories and equipment items (about 15 requests, one every 1.5 s) |
+| `npm run sync:catalog -- skills` | Sample the six highest-level characters of each class and build the skill list and equipment slots (about 75 requests) |
 
 Add `--dry-run` to a sync to fetch and validate everything without touching the database.
 

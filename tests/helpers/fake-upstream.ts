@@ -19,7 +19,62 @@ export interface FakeUpstreamState {
   categories: { id: string; name: string; child: { id: string; name: string }[] }[];
   itemsByPartition: Record<string, FakeItem[]>;
   reportedTotals: Record<string, number>;
+  pcData: { id: number; className: string; raceName: string }[];
+  characters: FakeCharacter[];
   failures: Record<string, { status: number } | { body: string }>;
+}
+
+export interface FakeCharacter {
+  characterId: string;
+  serverId: number;
+  pcId: number;
+  level: number;
+  slots: { slotPos: number; slotPosName: string }[];
+  skills: {
+    id: number;
+    name: string;
+    category: "Active" | "Passive" | "Dp";
+    skillLevel: number;
+    needLevel: number;
+    acquired: 0 | 1;
+    icon: string;
+  }[];
+}
+
+export function skill(id: number, overrides: Partial<FakeCharacter["skills"][number]> = {}) {
+  return {
+    id,
+    name: `Skill ${id}`,
+    category: "Active" as const,
+    skillLevel: 10,
+    needLevel: 1,
+    acquired: 1 as const,
+    icon: `${ICON_BASE}ICON_SKILL_${id}.png`,
+    ...overrides,
+  };
+}
+
+const DEFAULT_SLOTS = [
+  { slotPos: 1, slotPosName: "MainHand" },
+  { slotPos: 2, slotPosName: "SubHand" },
+];
+
+function charactersFor(classIndex: number, pcIds: [number, number]): FakeCharacter[] {
+  const base = (classIndex + 1) * 1000;
+  return pcIds.flatMap((pcId, raceIndex) =>
+    [0, 1].map((n) => ({
+      characterId: `c${classIndex}-${raceIndex}-${n}%3D`,
+      serverId: 1001 + raceIndex,
+      pcId,
+      level: 50 - n,
+      slots: DEFAULT_SLOTS,
+      skills: [
+        skill(base + 1, { skillLevel: 10 + n }),
+        skill(base + 2, { category: "Passive", skillLevel: 34 }),
+        skill(base + 3, { category: "Dp", skillLevel: 5, acquired: 0 }),
+      ],
+    })),
+  );
 }
 
 export function item(id: number, overrides: Partial<FakeItem> = {}): FakeItem {
@@ -67,8 +122,24 @@ export function defaultState(): FakeUpstreamState {
       "Usable_001/Wing": [item(31, { categoryName: "Wings", options: undefined, description: "Grants wings." })],
     },
     reportedTotals: {},
+    pcData: [],
+    characters: [],
     failures: {},
   };
+}
+
+export function stateWithCharacters(): FakeUpstreamState {
+  const state = defaultState();
+  state.classes.forEach((entry, index) => {
+    const light = 100 + index * 2;
+    const dark = light + 1;
+    state.pcData.push(
+      { id: light, className: entry.name.toUpperCase(), raceName: "Light" },
+      { id: dark, className: entry.name.toUpperCase(), raceName: "Dark" },
+    );
+    state.characters.push(...charactersFor(index, [light, dark]));
+  });
+  return state;
 }
 
 function respond(body: unknown): Response {
@@ -90,6 +161,31 @@ export function fakeFetch(state: FakeUpstreamState): { fetch: typeof fetch; urls
     if (url.pathname.endsWith("/gameinfo/classes")) return respond({ classList: state.classes });
     if (url.pathname.endsWith("/game/item/grade")) return respond(state.grades);
     if (url.pathname.endsWith("/game/item/category")) return respond(state.categories);
+
+    if (url.pathname.endsWith("/gameinfo/pcdata")) return respond({ pcDataList: state.pcData });
+
+    if (url.pathname.endsWith("/search/character")) {
+      const pcIds = new Set((url.searchParams.get("pcId") ?? "").split(",").map(Number));
+      return respond({
+        list: state.characters
+          .filter((character) => pcIds.has(character.pcId))
+          .map(({ characterId, serverId, pcId, level }) => ({ characterId, serverId, pcId, level })),
+      });
+    }
+
+    if (url.pathname.endsWith("/character/equipment")) {
+      const character = state.characters.find(
+        (candidate) =>
+          decodeURIComponent(candidate.characterId) === url.searchParams.get("characterId") &&
+          String(candidate.serverId) === url.searchParams.get("serverId"),
+      );
+      if (!character) return new Response("no such character", { status: 404 });
+      return respond({
+        equipment: { equipmentList: character.slots },
+        petwing: { pet: null, wing: null },
+        skill: { skillList: character.skills },
+      });
+    }
 
     if (url.pathname.endsWith("/dict/search/item")) {
       const category1 = url.searchParams.get("category1") ?? "";

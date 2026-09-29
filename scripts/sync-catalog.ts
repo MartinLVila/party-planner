@@ -1,10 +1,11 @@
 import "./env";
+import { fetchCharacterSample, syncCharacterSample } from "../src/lib/catalog/character-sample";
 import { fetchClassCatalog, syncClassCatalog } from "../src/lib/catalog/classes";
 import { fetchItemCatalog, syncItemCatalog } from "../src/lib/catalog/items";
 import { createDatabase } from "../src/lib/db/client";
 import { createUpstreamClient } from "../src/lib/upstream/client";
 
-const TARGETS = ["classes", "items"] as const;
+const TARGETS = ["classes", "items", "skills"] as const;
 type Target = (typeof TARGETS)[number];
 
 function parseArguments(argv: string[]): { target: Target; dryRun: boolean } {
@@ -24,17 +25,13 @@ async function main() {
 
   let examined: Record<string, unknown>;
   if (dryRun) {
-    const catalog =
-      target === "classes" ? await fetchClassCatalog(upstream.fetchJson) : await fetchItemCatalog(upstream.fetchJson);
-    examined = catalog.examined;
+    const fetchers = { classes: fetchClassCatalog, items: fetchItemCatalog, skills: fetchCharacterSample };
+    examined = (await fetchers[target](upstream.fetchJson)).examined;
   } else {
+    const syncs = { classes: syncClassCatalog, items: syncItemCatalog, skills: syncCharacterSample };
     const { db, close } = createDatabase();
     try {
-      const catalog =
-        target === "classes"
-          ? await syncClassCatalog(db, upstream.fetchJson)
-          : await syncItemCatalog(db, upstream.fetchJson);
-      examined = catalog.examined;
+      examined = (await syncs[target](db, upstream.fetchJson)).examined;
     } finally {
       await close();
     }
