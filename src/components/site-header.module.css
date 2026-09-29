@@ -1,0 +1,43 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgb(15 17 19 / 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #22262c;
+}
+
+.inner {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 10px var(--page-gutter);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand:hover {
+  color: var(--text);
+}
+
+.mark {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--text);
+  transform: rotate(45deg);
+}
+
+.name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}

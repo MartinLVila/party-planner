@@ -1,0 +1,83 @@
+:root {
+  --bg: #0f1113;
+  --bg-sunken: #101215;
+  --surface: #15181c;
+  --surface-muted: #131619;
+  --surface-raised: #1b1f24;
+  --surface-hover: #22272d;
+  --border-subtle: #1d2126;
+  --border: #262b32;
+  --border-strong: #323841;
+  --border-focus: #3a414b;
+  --text: #e6e8eb;
+  --text-soft: #c9ced5;
+  --text-muted: #a0a7b1;
+  --text-faint: #6f7680;
+  --focus-ring: #b8c4d6;
+  --done: oklch(0.76 0.11 175);
+  --planned: oklch(0.78 0.02 250);
+  --missing: oklch(0.68 0.15 22);
+  --missing-text: oklch(0.72 0.14 22);
+  --missing-border: oklch(0.5 0.1 22);
+  --page-gutter: clamp(12px, 3vw, 24px);
+  --page-width: 1320px;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--text-soft);
+}
+
+a:hover {
+  color: #ffffff;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+::placeholder {
+  color: var(--text-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
