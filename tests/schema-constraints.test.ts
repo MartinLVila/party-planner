@@ -22,7 +22,7 @@ async function insertParty(name = "Raid del jueves") {
       name,
       editTokenHash: randomBytes(32),
       viewTokenHash: randomBytes(32),
-      passwordHash: "scrypt$placeholder",
+      passwordHash: "scrypt:placeholder",
     })
     .returning();
   return party;

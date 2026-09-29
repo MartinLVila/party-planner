@@ -1,0 +1,139 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  max-width: 560px;
+}
+
+.heading {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.body {
+  margin: 0;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.input {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+  min-width: 0;
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--focus-ring);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.primary {
+  display: inline-block;
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--text);
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 500;
+}
+
+.primary:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+}
+
+.secondary {
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.secondary:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.error {
+  margin: 0;
+  color: var(--missing-text);
+  font-size: 13px;
+}
+
+.success {
+  margin: 0;
+  color: var(--done);
+  font-size: 13px;
+}
+
+.linkRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.linkHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.linkValue {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.linkValue .input {
+  flex: 1;
+  font: 400 12px var(--font-mono), monospace;
+  color: var(--text-soft);
+}
+
+.stack {
+  display: grid;
+  gap: 12px;
+}

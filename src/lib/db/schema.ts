@@ -16,8 +16,9 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+const bytea = customType<{ data: Buffer; driverData: Uint8Array }>({
   dataType: () => "bytea",
+  fromDriver: (value) => Buffer.from(value),
 });
 
 export const SYNC_KINDS = ["classes", "items", "character_sample"] as const;
