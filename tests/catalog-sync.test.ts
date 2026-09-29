@@ -1,7 +1,8 @@
 import { asc, eq } from "drizzle-orm";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { syncClassCatalog } from "../src/lib/catalog/classes";
 import { syncItemCatalog } from "../src/lib/catalog/items";
+import { failRun, type AnyDatabase } from "../src/lib/catalog/runs";
 import { catalogState, classes, itemCategories, itemGrades, items, syncRuns } from "../src/lib/db/schema";
 import { createTestDatabase, type TestDatabase } from "./helpers/database";
 import { fakeUpstream, item } from "./helpers/fake-upstream";
@@ -212,5 +213,21 @@ describe("item sync", () => {
     const leftovers = await db.select().from(items).where(eq(items.runId, second.id - 1));
     expect(leftovers).toHaveLength(0);
     expect(await db.select().from(itemGrades)).toHaveLength(5);
+  });
+});
+
+describe("recording a failed run", () => {
+  it("logs instead of replacing the original error when the database is also down", async () => {
+    const unreachable = {
+      update: () => {
+        throw new Error("connection terminated");
+      },
+    } as unknown as AnyDatabase;
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(failRun(unreachable, 7, new Error("HTTP 503"), {})).resolves.toBeUndefined();
+
+    expect(log).toHaveBeenCalledWith("Could not record the failure of sync run 7", expect.any(Error));
+    log.mockRestore();
   });
 });

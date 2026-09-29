@@ -27,6 +27,34 @@ export interface UpstreamClientOptions {
   now?: () => number;
 }
 
+const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+async function readCappedBody(response: Response, url: string): Promise<string> {
+  if (!response.body) return "";
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.byteLength;
+      if (received > MAX_BODY_BYTES) {
+        await reader.cancel();
+        throw new UpstreamError(`response larger than ${MAX_BODY_BYTES} bytes`, url);
+      }
+      chunks.push(value);
+    }
+  } catch (error) {
+    if (error instanceof UpstreamError) throw error;
+    throw new UpstreamError(`reading the response failed: ${describe(error)}`, url);
+  }
+
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 export function createUpstreamClient(options: UpstreamClientOptions = {}): {
@@ -54,15 +82,12 @@ export function createUpstreamClient(options: UpstreamClientOptions = {}): {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch (error) {
-      throw new UpstreamError(`request failed: ${error instanceof Error ? error.message : String(error)}`, url);
+      throw new UpstreamError(`request failed: ${describe(error)}`, url);
     }
 
     if (!response.ok) throw new UpstreamError(`HTTP ${response.status}`, url);
 
-    const body = await response.text();
-    if (Buffer.byteLength(body) > MAX_BODY_BYTES) {
-      throw new UpstreamError(`response larger than ${MAX_BODY_BYTES} bytes`, url);
-    }
+    const body = await readCappedBody(response, url);
 
     let json: unknown;
     try {

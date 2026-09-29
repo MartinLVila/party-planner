@@ -20,10 +20,14 @@ export async function startRun(db: AnyDatabase, kind: SyncKind, source: string):
 
 export async function failRun(db: AnyDatabase, runId: number, error: unknown, examined: Examined): Promise<void> {
   const message = error instanceof Error ? error.message : String(error);
-  await db
-    .update(syncRuns)
-    .set({ status: "failed", finishedAt: sql`now()`, error: message.slice(0, 2_000), examined })
-    .where(and(eq(syncRuns.id, runId), eq(syncRuns.status, "running")));
+  try {
+    await db
+      .update(syncRuns)
+      .set({ status: "failed", finishedAt: sql`now()`, error: message.slice(0, 2_000), examined })
+      .where(and(eq(syncRuns.id, runId), eq(syncRuns.status, "running")));
+  } catch (recordingError) {
+    console.error(`Could not record the failure of sync run ${runId}`, recordingError);
+  }
 }
 
 export async function activateRun(tx: Transaction, kind: SyncKind, runId: number, examined: Examined): Promise<void> {

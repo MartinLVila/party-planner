@@ -66,4 +66,32 @@ describe("upstream client", () => {
       "request failed: fetch failed (https://tw.ncsoft.com/x)",
     );
   });
+
+  it("stops reading a body that grows past 5 MB", async () => {
+    const chunk = new Uint8Array(1024 * 1024).fill(32);
+    let pulled = 0;
+    const endless = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        controller.enqueue(chunk);
+      },
+    });
+    const { client } = clientReturning(() => new Response(endless));
+
+    await expect(client.fetchJson("https://tw.ncsoft.com/x", schema)).rejects.toThrow("response larger than");
+    expect(pulled).toBeLessThan(10);
+  });
+
+  it("wraps a failure while reading the body with the URL", async () => {
+    const broken = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.error(new Error("connection reset"));
+      },
+    });
+    const { client } = clientReturning(() => new Response(broken));
+
+    await expect(client.fetchJson("https://tw.ncsoft.com/x", schema)).rejects.toThrow(
+      "reading the response failed: connection reset (https://tw.ncsoft.com/x)",
+    );
+  });
 });
