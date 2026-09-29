@@ -92,6 +92,7 @@ export const strings = {
   },
   build: {
     backToParty: "← Party",
+    backToCompare: "← Comparar",
     openBuild: "Abrir build",
     memberNameLabel: "Nombre del miembro",
     classLabel: "Clase",

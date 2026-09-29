@@ -47,18 +47,20 @@ function withSkill(member: PartyMember, plan: SkillPlan): PartyMember {
 function MemberTabs({
   members,
   currentId,
+  backLabel,
   onBack,
   onOpen,
 }: {
   members: readonly PartyMember[];
   currentId: string;
+  backLabel: string;
   onBack: () => void;
   onOpen: (memberId: string) => void;
 }) {
   return (
     <nav className={styles.memberTabs} aria-label={strings.party.rosterLabel}>
       <button type="button" className={styles.tab} onClick={onBack}>
-        {strings.build.backToParty}
+        {backLabel}
       </button>
       <span className={styles.divider} aria-hidden="true" />
       {members.map((member, index) => (
@@ -89,7 +91,9 @@ export function BuildView({
   onBack,
   onOpenMember,
   initialSlotPos = null,
+  backLabel,
 }: {
+  backLabel: string;
   snapshot: PartySnapshot;
   memberId: string;
   initialSlotPos?: number | null;
@@ -148,7 +152,13 @@ export function BuildView({
 
   return (
     <div className={styles.screen}>
-      <MemberTabs members={snapshot.members} currentId={memberId} onBack={onBack} onOpen={onOpenMember} />
+      <MemberTabs
+        members={snapshot.members}
+        currentId={memberId}
+        backLabel={backLabel}
+        onBack={onBack}
+        onOpen={onOpenMember}
+      />
       <BuildHeader
         member={member}
         position={index + 1}

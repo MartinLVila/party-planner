@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import type { CSSProperties, Dispatch, SetStateAction } from "react";
 import type { CatalogClass, CatalogGrade, CatalogItem, CatalogSkill } from "@/lib/party/catalog";
 import { compareRows, type CompareCell, type CompareRow } from "@/lib/party/compare";
 import { gradeColor } from "@/lib/party/grades";
@@ -10,6 +10,13 @@ import { memberStats, type MemberStats } from "@/lib/party/stats";
 import { strings } from "@/lib/strings";
 import { GameIcon } from "../build/game-icon";
 import styles from "./compare.module.css";
+
+export interface CompareFilters {
+  hidden: ReadonlySet<string>;
+  gapsOnly: boolean;
+}
+
+export const INITIAL_COMPARE_FILTERS: CompareFilters = { hidden: new Set(), gapsOnly: false };
 
 export interface CompareCatalog {
   classes: CatalogClass[];
@@ -159,7 +166,11 @@ export function CompareView({
   onBack,
   onOpenMember,
   onOpenSlot,
+  filters,
+  onFiltersChange,
 }: {
+  filters: CompareFilters;
+  onFiltersChange: Dispatch<SetStateAction<CompareFilters>>;
   members: readonly PartyMember[];
   catalog: CompareCatalog;
   items: ReadonlyMap<number, CatalogItem>;
@@ -168,8 +179,7 @@ export function CompareView({
   onOpenMember: (memberId: string) => void;
   onOpenSlot: (memberId: string, slotPos: number) => void;
 }) {
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
-  const [gapsOnly, setGapsOnly] = useState(false);
+  const { hidden, gapsOnly } = filters;
   const shown = members.filter((member) => !hidden.has(member.id));
   const gradeNames = new Map(catalog.grades.map((grade) => [grade.id, grade.name]));
   const classNames = new Map(catalog.classes.map((entry) => [entry.id, entry.displayName]));
@@ -179,10 +189,10 @@ export function CompareView({
   );
 
   const toggle = (memberId: string) =>
-    setHidden((current) => {
-      const next = new Set(current);
+    onFiltersChange((current) => {
+      const next = new Set(current.hidden);
       if (!next.delete(memberId)) next.add(memberId);
-      return next;
+      return { ...current, hidden: next };
     });
 
   return (
@@ -192,7 +202,7 @@ export function CompareView({
           <h1 className={styles.heading}>{strings.compare.heading}</h1>
           <p className={styles.note}>{strings.compare.note}</p>
         </div>
-        <button type="button" role="switch" aria-checked={gapsOnly} className={styles.switch} onClick={() => setGapsOnly(!gapsOnly)}>
+        <button type="button" role="switch" aria-checked={gapsOnly} className={styles.switch} onClick={() => onFiltersChange((current) => ({ ...current, gapsOnly: !current.gapsOnly }))}>
           <span className={styles.track}>
             <span className={styles.knob} />
           </span>
