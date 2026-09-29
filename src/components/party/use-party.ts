@@ -41,16 +41,23 @@ export function useParty(initial: PartySnapshot): PartyState {
   const confirmed = useRef(initial);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const pending = useRef(0);
+  const rejections = useRef(0);
 
   const submit = useCallback<PartyState["submit"]>((change, optimistic) => {
     if (optimistic) setSnapshot((current) => optimistic(current));
     setSaveStatus("saving");
     pending.current += 1;
+    const rejectionsAtSubmit = rejections.current;
 
     const run = queue.current.then(async () => {
+      if (rejections.current !== rejectionsAtSubmit) {
+        pending.current -= 1;
+        return false;
+      }
       const result = await send(confirmed.current.id, confirmed.current.revision, change);
       pending.current -= 1;
       if (result.snapshot) confirmed.current = result.snapshot;
+      if (!result.ok) rejections.current += 1;
       if (!result.ok || pending.current === 0) setSnapshot(confirmed.current);
       if (pending.current === 0) setSaveStatus(result.ok ? "saved" : "error");
       if (!result.ok) setNotice(REJECTION_NOTICES[result.reason]);
