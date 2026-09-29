@@ -88,9 +88,11 @@ export function BuildView({
   announce,
   onBack,
   onOpenMember,
+  initialSlotPos = null,
 }: {
   snapshot: PartySnapshot;
   memberId: string;
+  initialSlotPos?: number | null;
   catalog: BuildCatalog;
   items: ReadonlyMap<number, CatalogItem>;
   canEdit: boolean;
@@ -100,7 +102,9 @@ export function BuildView({
   onBack: () => void;
   onOpenMember: (memberId: string) => void;
 }) {
-  const [pickerSlot, setPickerSlot] = useState<SlotDefinition | null>(null);
+  const [pickerSlot, setPickerSlot] = useState<SlotDefinition | null>(
+    () => catalog.slots.find((slot) => slot.slotPos === initialSlotPos) ?? null,
+  );
   const index = snapshot.members.findIndex((member) => member.id === memberId);
   const member = snapshot.members[index];
   if (!member) return null;

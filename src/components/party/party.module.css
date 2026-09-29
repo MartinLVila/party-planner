@@ -453,3 +453,22 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.screenTabs {
+  display: flex;
+  gap: 4px;
+}
+
+.screenTab {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.screenTab[aria-current="page"] {
+  border-color: var(--border-strong);
+  background: #1f2329;
+  color: var(--text);
+}
