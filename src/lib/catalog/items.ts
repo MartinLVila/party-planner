@@ -1,7 +1,13 @@
 import { count, eq } from "drizzle-orm";
 import { itemCategories, itemGrades, items } from "../db/schema";
 import { DICTIONARY_API, type FetchJson } from "../upstream/client";
-import { categoryListSchema, gradeListSchema, itemPageSchema, type UpstreamItem } from "../upstream/schemas";
+import {
+  categoryListSchema,
+  gradeListSchema,
+  itemPageSchema,
+  type ItemPage,
+  type UpstreamItem,
+} from "../upstream/schemas";
 import {
   activateRun,
   activeRunId,
@@ -51,14 +57,17 @@ export function itemsSource(): string {
   return `${DICTIONARY_API}/dict/search/item`;
 }
 
-export async function fetchItemCatalog(fetchJson: FetchJson, pageSize = ITEM_PAGE_SIZE): Promise<ItemCatalog> {
+async function fetchGrades(fetchJson: FetchJson): Promise<ItemCatalog["grades"]> {
   const upstreamGrades = await fetchJson(withLocale("/game/item/grade"), gradeListSchema);
-  const upstreamCategories = await fetchJson(withLocale("/game/item/category"), categoryListSchema);
-
   const grades = upstreamGrades.map((grade, rank) => ({ id: grade.id, name: grade.name, rank }));
-  const gradeIds = new Set(grades.map((grade) => grade.id));
-  if (gradeIds.size !== grades.length) throw new CatalogRejected("grade ids are not unique");
+  if (new Set(grades.map((grade) => grade.id)).size !== grades.length) {
+    throw new CatalogRejected("grade ids are not unique");
+  }
+  return grades;
+}
 
+async function fetchCategories(fetchJson: FetchJson): Promise<ItemCatalog["categories"]> {
+  const upstreamCategories = await fetchJson(withLocale("/game/item/category"), categoryListSchema);
   const categories = upstreamCategories.flatMap((parent) => [
     { id: parent.id, name: parent.name, parentId: null },
     ...parent.child.map((child) => ({ id: child.id, name: child.name, parentId: parent.id })),
@@ -67,65 +76,99 @@ export async function fetchItemCatalog(fetchJson: FetchJson, pageSize = ITEM_PAG
   if (categoryIds.size !== categories.length) throw new CatalogRejected("category ids are not unique");
 
   for (const partition of ITEM_PARTITIONS) {
-    const known = [partition.category1, partition.category2].filter((id): id is string => id !== undefined);
-    const missing = known.filter((id) => !categoryIds.has(id));
+    const missing = [partition.category1, partition.category2].filter(
+      (id): id is string => id !== undefined && !categoryIds.has(id),
+    );
     if (missing.length > 0) throw new CatalogRejected(`upstream no longer lists category ${missing.join(", ")}`);
   }
+  return categories;
+}
 
-  const seen = new Map<number, string>();
-  const collected: UpstreamItem[] = [];
-  const perPartition: Record<string, number> = {};
-  let pages = 0;
+interface ItemCollector {
+  gradeIds: ReadonlySet<string>;
+  seen: Map<number, string>;
+  items: UpstreamItem[];
+  pages: number;
+}
 
+function assertConsistentPage(label: string, expectedTotal: number, pagination: ItemPage["pagination"]): void {
+  const { total, limit } = pagination;
+  if (total !== expectedTotal) {
+    throw new CatalogRejected(`${label}: total changed from ${expectedTotal} to ${total} while paging`);
+  }
+  if (total > limit) throw new CatalogRejected(`${label}: ${total} items exceed the upstream paging limit ${limit}`);
+}
+
+function collectItems(collector: ItemCollector, label: string, pageItems: UpstreamItem[]): void {
+  for (const item of pageItems) {
+    const previous = collector.seen.get(item.id);
+    if (previous !== undefined) {
+      throw new CatalogRejected(`item ${item.id} appeared twice (${previous} and ${label})`);
+    }
+    if (!collector.gradeIds.has(item.grade)) {
+      throw new CatalogRejected(`item ${item.id} has unknown grade ${item.grade}`);
+    }
+    collector.seen.set(item.id, label);
+    collector.items.push(item);
+  }
+}
+
+function partitionPageUrl(partition: ItemPartition, page: number, pageSize: number): string {
+  const params: Record<string, string | number> = { page, size: pageSize, category1: partition.category1 };
+  if (partition.category2) params.category2 = partition.category2;
+  return withLocale("/dict/search/item", params);
+}
+
+async function fetchPartition(
+  fetchJson: FetchJson,
+  collector: ItemCollector,
+  partition: ItemPartition,
+  pageSize: number,
+): Promise<number> {
+  const label = partitionLabel(partition);
+  let expectedTotal: number | null = null;
+  let fetched = 0;
+
+  for (let page = 1; ; page += 1) {
+    const result = await fetchJson(partitionPageUrl(partition, page, pageSize), itemPageSchema);
+    collector.pages += 1;
+    expectedTotal ??= result.pagination.total;
+    assertConsistentPage(label, expectedTotal, result.pagination);
+    collectItems(collector, label, result.contents);
+    fetched += result.contents.length;
+    if (page >= result.pagination.lastPage || result.contents.length === 0) break;
+  }
+
+  if (!expectedTotal) throw new CatalogRejected(`${label}: upstream reported no items`);
+  if (fetched !== expectedTotal) throw new CatalogRejected(`${label}: fetched ${fetched} of ${expectedTotal} items`);
+  return fetched;
+}
+
+export async function fetchItemCatalog(fetchJson: FetchJson, pageSize = ITEM_PAGE_SIZE): Promise<ItemCatalog> {
+  const grades = await fetchGrades(fetchJson);
+  const categories = await fetchCategories(fetchJson);
+  const collector: ItemCollector = {
+    gradeIds: new Set(grades.map((grade) => grade.id)),
+    seen: new Map(),
+    items: [],
+    pages: 0,
+  };
+
+  const itemsByPartition: Record<string, number> = {};
   for (const partition of ITEM_PARTITIONS) {
-    const label = partitionLabel(partition);
-    let expectedTotal: number | null = null;
-    let fetchedHere = 0;
-
-    for (let page = 1; ; page += 1) {
-      const params: Record<string, string | number> = { page, size: pageSize, category1: partition.category1 };
-      if (partition.category2) params.category2 = partition.category2;
-      const result = await fetchJson(withLocale("/dict/search/item", params), itemPageSchema);
-      pages += 1;
-
-      const { total, limit, lastPage } = result.pagination;
-      expectedTotal ??= total;
-      if (total !== expectedTotal) {
-        throw new CatalogRejected(`${label}: total changed from ${expectedTotal} to ${total} while paging`);
-      }
-      if (total > limit) throw new CatalogRejected(`${label}: ${total} items exceed the upstream paging limit ${limit}`);
-
-      for (const item of result.contents) {
-        const previous = seen.get(item.id);
-        if (previous !== undefined) {
-          throw new CatalogRejected(`item ${item.id} appeared twice (${previous} and ${label})`);
-        }
-        if (!gradeIds.has(item.grade)) throw new CatalogRejected(`item ${item.id} has unknown grade ${item.grade}`);
-        seen.set(item.id, label);
-        collected.push(item);
-      }
-      fetchedHere += result.contents.length;
-
-      if (page >= lastPage || result.contents.length === 0) break;
-    }
-
-    if (!expectedTotal) throw new CatalogRejected(`${label}: upstream reported no items`);
-    if (fetchedHere !== expectedTotal) {
-      throw new CatalogRejected(`${label}: fetched ${fetchedHere} of ${expectedTotal} items`);
-    }
-    perPartition[label] = fetchedHere;
+    itemsByPartition[partitionLabel(partition)] = await fetchPartition(fetchJson, collector, partition, pageSize);
   }
 
   return {
     grades,
     categories,
-    items: collected,
+    items: collector.items,
     examined: {
-      pages,
+      pages: collector.pages,
       grades: grades.length,
       categories: categories.length,
-      items: collected.length,
-      itemsByPartition: perPartition,
+      items: collector.items.length,
+      itemsByPartition,
     },
   };
 }

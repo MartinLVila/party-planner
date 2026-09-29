@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import sonarjs from "eslint-plugin-sonarjs";
 
 const UNESCAPED_HTML = "This renders unescaped HTML. Render text, or build nodes.";
 
@@ -27,7 +28,9 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    plugins: { sonarjs },
     rules: {
+      "sonarjs/cognitive-complexity": ["error", 15],
       "react/no-danger": "error",
       "no-restricted-syntax": ["error", ...rawHtmlSinks],
     },

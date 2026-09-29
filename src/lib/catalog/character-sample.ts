@@ -6,6 +6,7 @@ import {
   characterSearchSchema,
   classListSchema,
   pcDataSchema,
+  type CharacterEquipment,
   type CharacterSearchResult,
 } from "../upstream/schemas";
 import { classesSource } from "./classes";
@@ -111,80 +112,108 @@ export function highestLevelCharacters(
   return [...unique.values()].sort((a, b) => b.level - a.level).slice(0, limit);
 }
 
+interface SampleAccumulator {
+  skillsById: Map<number, SampledSkill>;
+  slotsByPos: Map<number, string>;
+}
+
+interface ClassTally {
+  characters: number;
+  highestLevel: number;
+  skillIds: Set<number>;
+}
+
+function recordSlots(accumulator: SampleAccumulator, equipment: CharacterEquipment): void {
+  for (const slot of equipment.equipment.equipmentList) {
+    const known = accumulator.slotsByPos.get(slot.slotPos);
+    if (known !== undefined && known !== slot.slotPosName) {
+      throw new CatalogRejected(`slot ${slot.slotPos} is both ${known} and ${slot.slotPosName}`);
+    }
+    accumulator.slotsByPos.set(slot.slotPos, slot.slotPosName);
+  }
+}
+
+type UpstreamSkill = CharacterEquipment["skill"]["skillList"][number];
+
+function assertSameSkill(known: SampledSkill, skill: UpstreamSkill, classId: number): void {
+  if (known.classId === classId && known.name === skill.name && known.category === skill.category) return;
+  throw new CatalogRejected(
+    `skill ${skill.id} disagrees between samples: ${known.name} (${known.category}, class ${known.classId}) ` +
+      `and ${skill.name} (${skill.category}, class ${classId})`,
+  );
+}
+
+function recordSkills(accumulator: SampleAccumulator, equipment: CharacterEquipment, classId: number): number[] {
+  return equipment.skill.skillList.map((skill) => {
+    const known = accumulator.skillsById.get(skill.id);
+    if (known) assertSameSkill(known, skill, classId);
+    const learnedLevel = skill.acquired === 1 ? skill.skillLevel : 0;
+    accumulator.skillsById.set(skill.id, {
+      id: skill.id,
+      classId,
+      name: skill.name,
+      category: skill.category,
+      iconPath: skill.icon,
+      requiredLevel: skill.needLevel,
+      maxLevelSeen: Math.max(known?.maxLevelSeen ?? 0, learnedLevel),
+    });
+    return skill.id;
+  });
+}
+
+async function searchCandidates(fetchJson: FetchJson, pcIds: number[], race: number) {
+  const { list } = await fetchJson(
+    siteUrl("/search/character", { keyword: SEARCH_KEYWORD, race, pcId: pcIds.join(","), page: 1, size: SEARCH_PAGE_SIZE }),
+    characterSearchSchema,
+  );
+  return highestLevelCharacters(list, pcIds, CHARACTERS_PER_CLASS_AND_RACE);
+}
+
+async function sampleClass(
+  fetchJson: FetchJson,
+  accumulator: SampleAccumulator,
+  sampledClass: SampledClass,
+): Promise<ClassTally> {
+  const tally: ClassTally = { characters: 0, highestLevel: 0, skillIds: new Set() };
+
+  for (const race of RACES) {
+    const candidates = await searchCandidates(fetchJson, sampledClass.pcIdsByRace.get(race) ?? [], race);
+    for (const character of candidates) {
+      const equipment = await fetchJson(
+        siteUrl("/character/equipment", { serverId: character.serverId, characterId: character.characterId }),
+        characterEquipmentSchema,
+      );
+      tally.characters += 1;
+      tally.highestLevel = Math.max(tally.highestLevel, character.level);
+      recordSlots(accumulator, equipment);
+      recordSkills(accumulator, equipment, sampledClass.id).forEach((id) => tally.skillIds.add(id));
+    }
+  }
+
+  if (tally.characters < MINIMUM_CHARACTERS_PER_CLASS) {
+    throw new CatalogRejected(
+      `${sampledClass.name}: sampled ${tally.characters} characters, need at least ${MINIMUM_CHARACTERS_PER_CLASS}`,
+    );
+  }
+  if (tally.skillIds.size === 0) throw new CatalogRejected(`${sampledClass.name}: sampled characters list no skills`);
+  return tally;
+}
+
 export async function fetchCharacterSample(fetchJson: FetchJson): Promise<CharacterSample> {
   const sampledClasses = await loadClasses(fetchJson);
-  const skillsById = new Map<number, SampledSkill>();
-  const slotsByPos = new Map<number, string>();
+  const accumulator: SampleAccumulator = { skillsById: new Map(), slotsByPos: new Map() };
   const perClass: Record<string, { characters: number; skills: number; highestLevel: number }> = {};
 
   for (const sampledClass of sampledClasses) {
-    let characters = 0;
-    let highestLevel = 0;
-    const classSkills = new Set<number>();
-
-    for (const race of RACES) {
-      const pcIds = sampledClass.pcIdsByRace.get(race) ?? [];
-      const { list } = await fetchJson(
-        siteUrl("/search/character", {
-          keyword: SEARCH_KEYWORD,
-          race,
-          pcId: pcIds.join(","),
-          page: 1,
-          size: SEARCH_PAGE_SIZE,
-        }),
-        characterSearchSchema,
-      );
-
-      for (const character of highestLevelCharacters(list, pcIds, CHARACTERS_PER_CLASS_AND_RACE)) {
-        const equipment = await fetchJson(
-          siteUrl("/character/equipment", {
-            serverId: character.serverId,
-            characterId: character.characterId,
-          }),
-          characterEquipmentSchema,
-        );
-        characters += 1;
-        highestLevel = Math.max(highestLevel, character.level);
-
-        for (const slot of equipment.equipment.equipmentList) {
-          const known = slotsByPos.get(slot.slotPos);
-          if (known !== undefined && known !== slot.slotPosName) {
-            throw new CatalogRejected(`slot ${slot.slotPos} is both ${known} and ${slot.slotPosName}`);
-          }
-          slotsByPos.set(slot.slotPos, slot.slotPosName);
-        }
-
-        for (const skill of equipment.skill.skillList) {
-          const known = skillsById.get(skill.id);
-          if (known && (known.classId !== sampledClass.id || known.name !== skill.name || known.category !== skill.category)) {
-            throw new CatalogRejected(
-              `skill ${skill.id} disagrees between samples: ${known.name} (${known.category}, class ${known.classId}) and ${skill.name} (${skill.category}, class ${sampledClass.id})`,
-            );
-          }
-          const learnedLevel = skill.acquired === 1 ? skill.skillLevel : 0;
-          skillsById.set(skill.id, {
-            id: skill.id,
-            classId: sampledClass.id,
-            name: skill.name,
-            category: skill.category,
-            iconPath: skill.icon,
-            requiredLevel: skill.needLevel,
-            maxLevelSeen: Math.max(known?.maxLevelSeen ?? 0, learnedLevel),
-          });
-          classSkills.add(skill.id);
-        }
-      }
-    }
-
-    if (characters < MINIMUM_CHARACTERS_PER_CLASS) {
-      throw new CatalogRejected(
-        `${sampledClass.name}: sampled ${characters} characters, need at least ${MINIMUM_CHARACTERS_PER_CLASS}`,
-      );
-    }
-    if (classSkills.size === 0) throw new CatalogRejected(`${sampledClass.name}: sampled characters list no skills`);
-    perClass[sampledClass.name] = { characters, skills: classSkills.size, highestLevel };
+    const tally = await sampleClass(fetchJson, accumulator, sampledClass);
+    perClass[sampledClass.name] = {
+      characters: tally.characters,
+      skills: tally.skillIds.size,
+      highestLevel: tally.highestLevel,
+    };
   }
 
+  const { skillsById, slotsByPos } = accumulator;
   if (slotsByPos.size === 0) throw new CatalogRejected("sampled characters list no equipment slots");
 
   const sampledSkills = [...skillsById.values()];
