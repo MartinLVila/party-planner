@@ -435,3 +435,21 @@
 .identityText {
   min-width: 0;
 }
+
+.openButton {
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  font-weight: 500;
+}
+
+.openButton:hover {
+  background: #252a31;
+}
+
+@media (max-width: 480px) {
+  .stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}

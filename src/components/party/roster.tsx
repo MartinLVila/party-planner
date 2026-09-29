@@ -73,6 +73,7 @@ interface RowProps {
   drop: "before" | "after" | null;
   onMove: (toIndex: number, fromKeyboard: boolean) => void;
   onRemove: () => void;
+  onOpen: () => void;
   onDragStart: () => void;
   onDragOver: () => void;
   onDrop: () => void;
@@ -126,7 +127,7 @@ function Reorder({ entry, index, total, onMove }: Pick<RowProps, "entry" | "inde
 }
 
 function RosterRow(props: RowProps) {
-  const { entry, index, canEdit, dragging, drop, onRemove } = props;
+  const { entry, index, canEdit, dragging, drop, onRemove, onOpen } = props;
   const { member, stats } = entry;
 
   const dragHandlers = canEdit
@@ -179,11 +180,12 @@ function RosterRow(props: RowProps) {
           </div>
         </div>
       </div>
-      {canEdit && (
-        <div className={styles.rowActions}>
-          <RemoveButton onConfirm={onRemove} />
-        </div>
-      )}
+      <div className={styles.rowActions}>
+        {canEdit && <RemoveButton onConfirm={onRemove} />}
+        <button type="button" className={styles.openButton} onClick={onOpen}>
+          {strings.build.openBuild}
+        </button>
+      </div>
     </li>
   );
 }
@@ -193,11 +195,13 @@ export function Roster({
   canEdit,
   onMove,
   onRemove,
+  onOpen,
 }: {
   entries: readonly RosterEntry[];
   canEdit: boolean;
   onMove: (memberId: string, toIndex: number) => void;
   onRemove: (memberId: string) => void;
+  onOpen: (memberId: string) => void;
 }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -237,6 +241,7 @@ export function Roster({
               onMove(entry.member.id, toIndex);
             }}
             onRemove={() => onRemove(entry.member.id)}
+            onOpen={() => onOpen(entry.member.id)}
             onDragStart={() => setDragIndex(index)}
             onDragOver={() => setOverIndex(index)}
             onDrop={() => {

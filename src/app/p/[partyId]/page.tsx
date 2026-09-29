@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { resolveSession } from "@/lib/access/party-access";
 import { readSessionToken } from "@/lib/access/session-cookie";
 import { getDb } from "@/lib/db/client";
-import { loadPartyCatalog } from "@/lib/party/catalog";
+import { loadItems, loadPartyCatalog } from "@/lib/party/catalog";
 import { loadPartySnapshot } from "@/lib/party/snapshot";
 import { strings } from "@/lib/strings";
 import styles from "../../page.module.css";
@@ -25,7 +25,9 @@ async function loadParty(rawPartyId: string) {
   if (!access) return null;
 
   const [snapshot, catalog] = await Promise.all([loadPartySnapshot(db, partyId.data), loadPartyCatalog(db)]);
-  return snapshot ? { snapshot, catalog, access } : null;
+  if (!snapshot) return null;
+  const equippedIds = snapshot.members.flatMap((member) => member.equipment.map((entry) => entry.itemId));
+  return { snapshot, catalog, access, items: await loadItems(db, equippedIds) };
 }
 
 export default async function PartyPage({ params }: { params: Promise<{ partyId: string }> }) {
@@ -43,14 +45,21 @@ export default async function PartyPage({ params }: { params: Promise<{ partyId:
     );
   }
 
-  const { snapshot, catalog, access } = party;
+  const { snapshot, catalog, access, items } = party;
   return (
     <div className={styles.shell}>
       <SiteHeader />
       <main className={styles.wide}>
         <PartyView
           initial={snapshot}
-          catalog={{ classes: catalog.classes, slots: catalog.slots, skills: catalog.skills, missing: catalog.missing }}
+          catalog={{
+            classes: catalog.classes,
+            grades: catalog.grades,
+            slots: catalog.slots,
+            skills: catalog.skills,
+            missing: catalog.missing,
+          }}
+          initialItems={items}
           canEdit={access === "edit"}
         />
         {access === "edit" && (
