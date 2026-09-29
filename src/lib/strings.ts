@@ -22,6 +22,7 @@ export const strings = {
       password: "La contraseña tiene que tener entre 8 y 128 caracteres.",
       creationCode: "El código de creación no es correcto.",
       disabled: "Crear parties está deshabilitado en este sitio.",
+      tooManyAttempts: "Demasiados intentos. Esperá 15 minutos y probá de nuevo.",
       unexpected: "No se pudo crear la party. Probá de nuevo en un rato.",
     },
   },

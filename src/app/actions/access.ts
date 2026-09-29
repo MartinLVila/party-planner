@@ -1,8 +1,10 @@
 "use server";
 
 import { z } from "zod";
+import { clientAddress } from "@/lib/access/client-address";
 import { checkCreationCode } from "@/lib/access/creation-code";
 import { changePassword, createParty, resolveSession, rotateLinks, unlockParty } from "@/lib/access/party-access";
+import { CREATION_CODE_LIMIT, forgetAttempts, takeAttempt } from "@/lib/access/rate-limit";
 import { PASSWORD_LENGTH } from "@/lib/access/secrets";
 import { readSessionToken, storeSession } from "@/lib/access/session-cookie";
 import { getDb } from "@/lib/db/client";
@@ -49,11 +51,18 @@ export async function createPartyAction(_previous: CreatePartyState, form: FormD
   });
   if (!parsed.success) return { status: "error", message: createPartyError(parsed.error.issues[0]?.path[0]), name };
 
-  const codeCheck = await checkCreationCode(parsed.data.creationCode);
-  if (codeCheck !== "accepted") return { status: "error", message: creationCodeErrors[codeCheck], name };
-
   try {
-    const party = await createParty(getDb(), { name: parsed.data.name, password: parsed.data.password });
+    const db = getDb();
+    const address = await clientAddress();
+    if (!(await takeAttempt(db, CREATION_CODE_LIMIT, address))) {
+      return { status: "error", message: strings.createParty.errors.tooManyAttempts, name };
+    }
+
+    const codeCheck = await checkCreationCode(parsed.data.creationCode);
+    if (codeCheck !== "accepted") return { status: "error", message: creationCodeErrors[codeCheck], name };
+    await forgetAttempts(db, CREATION_CODE_LIMIT, address);
+
+    const party = await createParty(db, { name: parsed.data.name, password: parsed.data.password });
     await storeSession(party);
     return {
       status: "created",

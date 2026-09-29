@@ -30,7 +30,9 @@ export function UnlockForm() {
   const router = useRouter();
 
   useEffect(() => {
-    if (state.status === "unlocked") router.replace(`/p/${state.partyId}`);
+    if (state.status !== "unlocked") return;
+    capturedToken = null;
+    router.replace(`/p/${state.partyId}`);
   }, [state, router]);
 
   if (token === undefined) return null;

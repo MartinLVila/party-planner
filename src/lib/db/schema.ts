@@ -209,6 +209,12 @@ export const partyPasswordThrottle = pgTable("party_password_throttle", {
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
 });
 
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  attempts: integer("attempts").notNull().default(0),
+  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const partyRevisions = pgTable(
   "party_revisions",
   {
