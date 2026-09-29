@@ -13,7 +13,6 @@ import {
   smallint,
   text,
   timestamp,
-  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -234,7 +233,7 @@ export const members = pgTable(
     role: text("role").$type<Role>().notNull(),
   },
   (table) => [
-    uniqueIndex("members_party_position").on(table.partyId, table.position),
+    index("members_party").on(table.partyId),
     check("members_role", sql`${table.role} IN (${oneOf(ROLES)})`),
     check("members_name_length", sql`char_length(${table.name}) BETWEEN ${between(MEMBER_NAME_LENGTH)}`),
     check("members_position", sql`${table.position} >= 0`),

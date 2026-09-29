@@ -1,6 +1,6 @@
 {
-  "id": "bc6c8d8c-fe4d-4dd4-b758-b84f2e06592b",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "8b13ad3f-8b3d-45bc-971e-a34e51217a98",
+  "prevId": "bc6c8d8c-fe4d-4dd4-b758-b84f2e06592b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -33,15 +33,15 @@
         "catalog_state_active_run_id_sync_runs_id_fk": {
           "name": "catalog_state_active_run_id_sync_runs_id_fk",
           "tableFrom": "catalog_state",
-          "tableTo": "sync_runs",
           "columnsFrom": [
             "active_run_id"
           ],
+          "tableTo": "sync_runs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -90,15 +90,15 @@
         "classes_run_id_sync_runs_id_fk": {
           "name": "classes_run_id_sync_runs_id_fk",
           "tableFrom": "classes",
-          "tableTo": "sync_runs",
           "columnsFrom": [
             "run_id"
           ],
+          "tableTo": "sync_runs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -143,15 +143,15 @@
         "equipment_slots_run_id_sync_runs_id_fk": {
           "name": "equipment_slots_run_id_sync_runs_id_fk",
           "tableFrom": "equipment_slots",
-          "tableTo": "sync_runs",
           "columnsFrom": [
             "run_id"
           ],
+          "tableTo": "sync_runs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -202,15 +202,15 @@
         "item_categories_run_id_sync_runs_id_fk": {
           "name": "item_categories_run_id_sync_runs_id_fk",
           "tableFrom": "item_categories",
-          "tableTo": "sync_runs",
           "columnsFrom": [
             "run_id"
           ],
+          "tableTo": "sync_runs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -261,15 +261,15 @@
         "item_grades_run_id_sync_runs_id_fk": {
           "name": "item_grades_run_id_sync_runs_id_fk",
           "tableFrom": "item_grades",
-          "tableTo": "sync_runs",
           "columnsFrom": [
             "run_id"
           ],
+          "tableTo": "sync_runs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -357,24 +357,24 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "items_run_id_sync_runs_id_fk": {
           "name": "items_run_id_sync_runs_id_fk",
           "tableFrom": "items",
-          "tableTo": "sync_runs",
           "columnsFrom": [
             "run_id"
           ],
+          "tableTo": "sync_runs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -440,15 +440,15 @@
         "member_equipment_member_id_members_id_fk": {
           "name": "member_equipment_member_id_members_id_fk",
           "tableFrom": "member_equipment",
-          "tableTo": "members",
           "columnsFrom": [
             "member_id"
           ],
+          "tableTo": "members",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -509,15 +509,15 @@
         "member_skills_member_id_members_id_fk": {
           "name": "member_skills_member_id_members_id_fk",
           "tableFrom": "member_skills",
-          "tableTo": "members",
           "columnsFrom": [
             "member_id"
           ],
+          "tableTo": "members",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -593,24 +593,24 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "members_party_id_parties_id_fk": {
           "name": "members_party_id_parties_id_fk",
           "tableFrom": "members",
-          "tableTo": "parties",
           "columnsFrom": [
             "party_id"
           ],
+          "tableTo": "parties",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -702,17 +702,17 @@
       "uniqueConstraints": {
         "parties_edit_token_hash_unique": {
           "name": "parties_edit_token_hash_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "edit_token_hash"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "parties_view_token_hash_unique": {
           "name": "parties_view_token_hash_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "view_token_hash"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -760,15 +760,15 @@
         "party_password_throttle_party_id_parties_id_fk": {
           "name": "party_password_throttle_party_id_parties_id_fk",
           "tableFrom": "party_password_throttle",
-          "tableTo": "parties",
           "columnsFrom": [
             "party_id"
           ],
+          "tableTo": "parties",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -812,15 +812,15 @@
         "party_revisions_party_id_parties_id_fk": {
           "name": "party_revisions_party_id_parties_id_fk",
           "tableFrom": "party_revisions",
-          "tableTo": "parties",
           "columnsFrom": [
             "party_id"
           ],
+          "tableTo": "parties",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -891,24 +891,24 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "party_sessions_party_id_parties_id_fk": {
           "name": "party_sessions_party_id_parties_id_fk",
           "tableFrom": "party_sessions",
-          "tableTo": "parties",
           "columnsFrom": [
             "party_id"
           ],
+          "tableTo": "parties",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -999,24 +999,24 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "skills_run_id_sync_runs_id_fk": {
           "name": "skills_run_id_sync_runs_id_fk",
           "tableFrom": "skills",
-          "tableTo": "sync_runs",
           "columnsFrom": [
             "run_id"
           ],
+          "tableTo": "sync_runs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -1112,9 +1112,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -1136,10 +1136,10 @@
   },
   "enums": {},
   "schemas": {},
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { and, asc, eq, gte, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { memberEquipment, members, memberSkills, parties } from "../src/lib/db/schema";
 import { createTestDatabase, type TestDatabase } from "./helpers/database";
@@ -41,8 +42,8 @@ async function rejects(write: Promise<unknown>, constraint: string) {
     (reason: unknown) => reason,
   );
   expect(error, `expected ${constraint} to reject the write`).not.toBeNull();
-  const cause = (error as { cause?: { constraint?: string } }).cause;
-  expect(cause?.constraint).toBe(constraint);
+  const violation = error as { constraint?: string; cause?: { constraint?: string } };
+  expect(violation.cause?.constraint ?? violation.constraint).toBe(constraint);
 }
 
 describe("party names", () => {
@@ -73,6 +74,59 @@ describe("members", () => {
     const party = await insertParty();
     await insertMember(party.id, 0, "Kaelen");
     await rejects(insertMember(party.id, 0, "Mirelle"), "members_party_position");
+  });
+
+  it("swaps two members' positions in a single statement", async () => {
+    const party = await insertParty();
+    const first = await insertMember(party.id, 0, "Kaelen");
+    await insertMember(party.id, 1, "Mirelle");
+
+    await db
+      .update(members)
+      .set({ position: sql`CASE WHEN ${members.id} = ${first.id} THEN 1 ELSE 0 END` })
+      .where(eq(members.partyId, party.id));
+
+    const order = await db
+      .select({ name: members.name })
+      .from(members)
+      .where(eq(members.partyId, party.id))
+      .orderBy(asc(members.position));
+    expect(order.map((member) => member.name)).toEqual(["Mirelle", "Kaelen"]);
+  });
+
+  it("shifts a range of positions to make room in the middle", async () => {
+    const party = await insertParty();
+    await insertMember(party.id, 0, "Kaelen");
+    await insertMember(party.id, 1, "Mirelle");
+    await insertMember(party.id, 2, "Voss");
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(members)
+        .set({ position: sql`${members.position} + 1` })
+        .where(and(eq(members.partyId, party.id), gte(members.position, 1)));
+      await tx.insert(members).values({ partyId: party.id, position: 1, name: "Sable", classId: 5, role: "DPS" });
+    });
+
+    const order = await db
+      .select({ name: members.name })
+      .from(members)
+      .where(eq(members.partyId, party.id))
+      .orderBy(asc(members.position));
+    expect(order.map((member) => member.name)).toEqual(["Kaelen", "Sable", "Mirelle", "Voss"]);
+  });
+
+  it("rejects a transaction that leaves two members in one position", async () => {
+    const party = await insertParty();
+    const first = await insertMember(party.id, 0, "Kaelen");
+    await insertMember(party.id, 1, "Mirelle");
+
+    await rejects(
+      db.transaction(async (tx) => {
+        await tx.update(members).set({ position: 1 }).where(eq(members.id, first.id));
+      }),
+      "members_party_position",
+    );
   });
 
   it("allows the same position in different parties", async () => {

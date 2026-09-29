@@ -162,7 +162,7 @@ ALTER TABLE "party_revisions" ADD CONSTRAINT "party_revisions_party_id_parties_i
 ALTER TABLE "party_sessions" ADD CONSTRAINT "party_sessions_party_id_parties_id_fk" FOREIGN KEY ("party_id") REFERENCES "public"."parties"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "skills" ADD CONSTRAINT "skills_run_id_sync_runs_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."sync_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "items_run_category" ON "items" USING btree ("run_id","category_name");--> statement-breakpoint
-CREATE UNIQUE INDEX "members_party_position" ON "members" USING btree ("party_id","position");--> statement-breakpoint
+CREATE INDEX "members_party" ON "members" USING btree ("party_id");--> statement-breakpoint
 CREATE INDEX "party_sessions_party" ON "party_sessions" USING btree ("party_id");--> statement-breakpoint
 CREATE INDEX "skills_run_class" ON "skills" USING btree ("run_id","class_id");--> statement-breakpoint
 CREATE INDEX "sync_runs_kind_started_at" ON "sync_runs" USING btree ("kind","started_at");
