@@ -52,6 +52,7 @@ export function useParty(initial: PartySnapshot): PartyState {
     const run = queue.current.then(async () => {
       if (rejections.current !== rejectionsAtSubmit) {
         pending.current -= 1;
+        if (pending.current === 0) setSaveStatus("error");
         return false;
       }
       const result = await send(confirmed.current.id, confirmed.current.revision, change);

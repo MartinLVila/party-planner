@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { loadItemsAction } from "@/app/actions/items";
 import { PARTY_NAME_LENGTH } from "@/lib/db/schema";
 import type { CatalogItem } from "@/lib/party/catalog";
 import type { PartySnapshot } from "@/lib/party/snapshot";
@@ -95,6 +96,18 @@ export function PartyView({
   const [items, setItems] = useState(() => new Map(initialItems.map((item) => [item.id, item])));
   const { members } = snapshot;
   const openMember = members.find((member) => member.id === openMemberId);
+  const requestedItems = useRef(new Set(initialItems.map((item) => item.id)));
+
+  useEffect(() => {
+    const missing = [...new Set(members.flatMap((member) => member.equipment.map((entry) => entry.itemId)))].filter(
+      (id) => !requestedItems.current.has(id),
+    );
+    if (missing.length === 0) return;
+    missing.forEach((id) => requestedItems.current.add(id));
+    void loadItemsAction({ partyId: snapshot.id, itemIds: missing }).then((loaded) =>
+      setItems((current) => new Map([...current, ...loaded.map((item) => [item.id, item] as const)])),
+    );
+  }, [members, snapshot.id]);
 
   const entries = useMemo<RosterEntry[]>(() => {
     const classById = new Map(catalog.classes.map((entry) => [entry.id, entry]));
@@ -169,7 +182,10 @@ export function PartyView({
           items={items}
           canEdit={canEdit}
           submit={submit}
-          rememberItem={(item) => setItems((current) => new Map(current).set(item.id, item))}
+          rememberItem={(item) => {
+            requestedItems.current.add(item.id);
+            setItems((current) => new Map(current).set(item.id, item));
+          }}
           announce={setAnnouncement}
           onBack={() => setOpenMemberId(null)}
           onOpenMember={setOpenMemberId}

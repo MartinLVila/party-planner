@@ -4,7 +4,7 @@ import { z } from "zod";
 import { resolveSession } from "@/lib/access/party-access";
 import { readSessionToken } from "@/lib/access/session-cookie";
 import { getDb } from "@/lib/db/client";
-import { findSlot, searchItems, type CatalogItem } from "@/lib/party/catalog";
+import { findSlot, loadItems, searchItems, type CatalogItem } from "@/lib/party/catalog";
 
 const ITEM_RESULTS_LIMIT = 60;
 
@@ -44,5 +44,27 @@ export async function searchItemsAction(input: unknown): Promise<ItemSearchResul
   } catch (error) {
     console.error(`Searching items for party ${partyId} failed`, error);
     return { ok: false, reason: "failed" };
+  }
+}
+
+const MAX_ITEM_LOOKUP = 200;
+
+const lookup = z.object({
+  partyId: z.uuid(),
+  itemIds: z.array(z.number().int().positive()).max(MAX_ITEM_LOOKUP),
+});
+
+export async function loadItemsAction(input: unknown): Promise<CatalogItem[]> {
+  const parsed = lookup.safeParse(input);
+  if (!parsed.success) return [];
+
+  const { partyId, itemIds } = parsed.data;
+  try {
+    const db = getDb();
+    if (!(await resolveSession(db, partyId, await readSessionToken()))) return [];
+    return await loadItems(db, itemIds);
+  } catch (error) {
+    console.error(`Loading items for party ${partyId} failed`, error);
+    return [];
   }
 }
