@@ -146,62 +146,76 @@ function respond(body: unknown): Response {
   return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
 }
 
+type Route = (url: URL, state: FakeUpstreamState) => Response;
+
+function searchCharacters(url: URL, state: FakeUpstreamState): Response {
+  const pcIds = new Set((url.searchParams.get("pcId") ?? "").split(",").map(Number));
+  return respond({
+    list: state.characters
+      .filter((character) => pcIds.has(character.pcId))
+      .map(({ characterId, serverId, pcId, level }) => ({ characterId, serverId, pcId, level })),
+  });
+}
+
+function characterEquipment(url: URL, state: FakeUpstreamState): Response {
+  const character = state.characters.find(
+    (candidate) =>
+      decodeURIComponent(candidate.characterId) === url.searchParams.get("characterId") &&
+      String(candidate.serverId) === url.searchParams.get("serverId"),
+  );
+  if (!character) return new Response("no such character", { status: 404 });
+  return respond({
+    equipment: { equipmentList: character.slots },
+    petwing: { pet: null, wing: null },
+    skill: { skillList: character.skills },
+  });
+}
+
+function searchItems(url: URL, state: FakeUpstreamState): Response {
+  const category1 = url.searchParams.get("category1") ?? "";
+  const category2 = url.searchParams.get("category2");
+  const label = category2 ? `${category1}/${category2}` : category1;
+  const all = state.itemsByPartition[label] ?? [];
+  const page = Number(url.searchParams.get("page"));
+  const size = Number(url.searchParams.get("size"));
+  const total = state.reportedTotals[label] ?? all.length;
+  return respond({
+    contents: all.slice((page - 1) * size, page * size),
+    pagination: { page, size, lastPage: Math.ceil(total / size), total, limit: 10000 },
+  });
+}
+
+const ROUTES: [suffix: string, route: Route][] = [
+  ["/gameinfo/classes", (_url, state) => respond({ classList: state.classes })],
+  ["/gameinfo/pcdata", (_url, state) => respond({ pcDataList: state.pcData })],
+  ["/game/item/grade", (_url, state) => respond(state.grades)],
+  ["/game/item/category", (_url, state) => respond(state.categories)],
+  ["/search/character", searchCharacters],
+  ["/character/equipment", characterEquipment],
+  ["/dict/search/item", searchItems],
+];
+
+function simulatedFailure(failure: FakeUpstreamState["failures"][string]): Response {
+  return "status" in failure ? new Response("upstream error", { status: failure.status }) : new Response(failure.body);
+}
+
+function requestUrl(input: string | URL | Request): URL {
+  if (typeof input === "string") return new URL(input);
+  return new URL(input instanceof URL ? input.href : input.url);
+}
+
 export function fakeFetch(state: FakeUpstreamState): { fetch: typeof fetch; urls: string[] } {
   const urls: string[] = [];
 
   const handler = async (input: string | URL | Request): Promise<Response> => {
-    const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+    const url = requestUrl(input);
     urls.push(url.toString());
 
     const failure = state.failures[url.pathname];
-    if (failure) {
-      return "status" in failure ? new Response("upstream error", { status: failure.status }) : new Response(failure.body);
-    }
+    if (failure) return simulatedFailure(failure);
 
-    if (url.pathname.endsWith("/gameinfo/classes")) return respond({ classList: state.classes });
-    if (url.pathname.endsWith("/game/item/grade")) return respond(state.grades);
-    if (url.pathname.endsWith("/game/item/category")) return respond(state.categories);
-
-    if (url.pathname.endsWith("/gameinfo/pcdata")) return respond({ pcDataList: state.pcData });
-
-    if (url.pathname.endsWith("/search/character")) {
-      const pcIds = new Set((url.searchParams.get("pcId") ?? "").split(",").map(Number));
-      return respond({
-        list: state.characters
-          .filter((character) => pcIds.has(character.pcId))
-          .map(({ characterId, serverId, pcId, level }) => ({ characterId, serverId, pcId, level })),
-      });
-    }
-
-    if (url.pathname.endsWith("/character/equipment")) {
-      const character = state.characters.find(
-        (candidate) =>
-          decodeURIComponent(candidate.characterId) === url.searchParams.get("characterId") &&
-          String(candidate.serverId) === url.searchParams.get("serverId"),
-      );
-      if (!character) return new Response("no such character", { status: 404 });
-      return respond({
-        equipment: { equipmentList: character.slots },
-        petwing: { pet: null, wing: null },
-        skill: { skillList: character.skills },
-      });
-    }
-
-    if (url.pathname.endsWith("/dict/search/item")) {
-      const category1 = url.searchParams.get("category1") ?? "";
-      const category2 = url.searchParams.get("category2");
-      const label = category2 ? `${category1}/${category2}` : category1;
-      const all = state.itemsByPartition[label] ?? [];
-      const page = Number(url.searchParams.get("page"));
-      const size = Number(url.searchParams.get("size"));
-      const total = state.reportedTotals[label] ?? all.length;
-      return respond({
-        contents: all.slice((page - 1) * size, page * size),
-        pagination: { page, size, lastPage: Math.ceil(total / size), total, limit: 10000 },
-      });
-    }
-
-    return new Response("not found", { status: 404 });
+    const route = ROUTES.find(([suffix]) => url.pathname.endsWith(suffix));
+    return route ? route[1](url, state) : new Response("not found", { status: 404 });
   };
 
   return { fetch: handler as typeof fetch, urls };
