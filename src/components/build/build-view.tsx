@@ -47,18 +47,20 @@ function withSkill(member: PartyMember, plan: SkillPlan): PartyMember {
 function MemberTabs({
   members,
   currentId,
+  backLabel,
   onBack,
   onOpen,
 }: {
   members: readonly PartyMember[];
   currentId: string;
+  backLabel: string;
   onBack: () => void;
   onOpen: (memberId: string) => void;
 }) {
   return (
     <nav className={styles.memberTabs} aria-label={strings.party.rosterLabel}>
       <button type="button" className={styles.tab} onClick={onBack}>
-        {strings.build.backToParty}
+        {backLabel}
       </button>
       <span className={styles.divider} aria-hidden="true" />
       {members.map((member, index) => (
@@ -88,9 +90,13 @@ export function BuildView({
   announce,
   onBack,
   onOpenMember,
+  initialSlotPos = null,
+  backLabel,
 }: {
+  backLabel: string;
   snapshot: PartySnapshot;
   memberId: string;
+  initialSlotPos?: number | null;
   catalog: BuildCatalog;
   items: ReadonlyMap<number, CatalogItem>;
   canEdit: boolean;
@@ -100,7 +106,9 @@ export function BuildView({
   onBack: () => void;
   onOpenMember: (memberId: string) => void;
 }) {
-  const [pickerSlot, setPickerSlot] = useState<SlotDefinition | null>(null);
+  const [pickerSlot, setPickerSlot] = useState<SlotDefinition | null>(
+    () => catalog.slots.find((slot) => slot.slotPos === initialSlotPos) ?? null,
+  );
   const index = snapshot.members.findIndex((member) => member.id === memberId);
   const member = snapshot.members[index];
   if (!member) return null;
@@ -144,7 +152,13 @@ export function BuildView({
 
   return (
     <div className={styles.screen}>
-      <MemberTabs members={snapshot.members} currentId={memberId} onBack={onBack} onOpen={onOpenMember} />
+      <MemberTabs
+        members={snapshot.members}
+        currentId={memberId}
+        backLabel={backLabel}
+        onBack={onBack}
+        onOpen={onOpenMember}
+      />
       <BuildHeader
         member={member}
         position={index + 1}

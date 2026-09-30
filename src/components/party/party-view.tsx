@@ -8,6 +8,7 @@ import type { PartySnapshot } from "@/lib/party/snapshot";
 import { memberStats, moveInList } from "@/lib/party/stats";
 import { strings } from "@/lib/strings";
 import { BuildView, type BuildCatalog } from "../build/build-view";
+import { CompareView, INITIAL_COMPARE_FILTERS } from "../compare/compare-view";
 import { AddMemberForm, type NewMember } from "./add-member-form";
 import { CompositionCards } from "./composition-cards";
 import styles from "./party.module.css";
@@ -16,6 +17,33 @@ import { useParty, type SaveStatus } from "./use-party";
 
 export interface PartyViewCatalog extends BuildCatalog {
   missing: string[];
+}
+
+type Screen = "party" | "compare";
+
+function ScreenTabs({ current, onChange }: { current: Screen; onChange: (screen: Screen) => void }) {
+  const tabs: [Screen, string][] = [
+    ["party", strings.screens.party],
+    ["compare", strings.screens.compare],
+  ];
+  return (
+    <nav className={styles.screenTabs} aria-label={strings.screens.label}>
+      {tabs.map(([screen, label]) => {
+        const active = current === screen;
+        return (
+          <button
+            key={screen}
+            type="button"
+            className={styles.screenTab}
+            aria-current={active ? "page" : undefined}
+            onClick={() => onChange(screen)}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </nav>
+  );
 }
 
 const SAVE_LABELS: Record<SaveStatus, string> = {
@@ -93,6 +121,9 @@ export function PartyView({
   const [adding, setAdding] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [openMemberId, setOpenMemberId] = useState<string | null>(null);
+  const [openSlotPos, setOpenSlotPos] = useState<number | null>(null);
+  const [screen, setScreen] = useState<Screen>("party");
+  const [compareFilters, setCompareFilters] = useState(INITIAL_COMPARE_FILTERS);
   const [items, setItems] = useState(() => new Map(initialItems.map((item) => [item.id, item])));
   const { members } = snapshot;
   const openMember = members.find((member) => member.id === openMemberId);
@@ -171,11 +202,23 @@ export function PartyView({
     </>
   );
 
+  const goTo = (next: Screen) => {
+    setOpenMemberId(null);
+    setScreen(next);
+  };
+  const openBuild = (memberId: string, slotPos: number | null = null) => {
+    setOpenSlotPos(slotPos);
+    setOpenMemberId(memberId);
+  };
+
   if (openMember) {
     return (
       <div className={styles.screen}>
+        <ScreenTabs current={screen} onChange={goTo} />
         {banners}
         <BuildView
+          key={`${openMember.id}:${openSlotPos ?? ""}`}
+          initialSlotPos={openSlotPos}
           snapshot={snapshot}
           memberId={openMember.id}
           catalog={catalog}
@@ -187,8 +230,29 @@ export function PartyView({
             setItems((current) => new Map(current).set(item.id, item));
           }}
           announce={setAnnouncement}
-          onBack={() => setOpenMemberId(null)}
-          onOpenMember={setOpenMemberId}
+          backLabel={screen === "compare" ? strings.build.backToCompare : strings.build.backToParty}
+          onBack={() => goTo(screen)}
+          onOpenMember={(memberId) => openBuild(memberId)}
+        />
+      </div>
+    );
+  }
+
+  if (screen === "compare") {
+    return (
+      <div className={styles.screen}>
+        <ScreenTabs current="compare" onChange={goTo} />
+        {banners}
+        <CompareView
+          members={members}
+          catalog={catalog}
+          items={items}
+          canEdit={canEdit}
+          onBack={() => goTo("party")}
+          onOpenMember={(memberId) => openBuild(memberId)}
+          onOpenSlot={openBuild}
+          filters={compareFilters}
+          onFiltersChange={setCompareFilters}
         />
       </div>
     );
@@ -196,6 +260,7 @@ export function PartyView({
 
   return (
     <div className={styles.screen}>
+      <ScreenTabs current="party" onChange={goTo} />
       {banners}
       <div className={styles.titleRow}>
         <div className={styles.titleBlock}>
@@ -236,7 +301,7 @@ export function PartyView({
           canEdit={canEdit}
           onMove={moveMember}
           onRemove={removeMember}
-          onOpen={setOpenMemberId}
+          onOpen={(memberId) => openBuild(memberId)}
         />
       )}
     </div>

@@ -8,8 +8,8 @@ stays in English, exactly as the game shows it on Global servers.
 
 ## Status
 
-Early development. The data model, security baseline and catalog sync land first; the
-screens described below follow.
+The party, build and compare screens work end to end against a local database. It is not deployed
+yet.
 
 ## What it does
 
