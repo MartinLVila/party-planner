@@ -1,0 +1,14 @@
+.footer {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.inner {
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 14px var(--page-gutter);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font: 400 11.5px var(--font-mono), monospace;
+  color: var(--text-faint);
+}
