@@ -1,22 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { loadItemsAction } from "@/app/actions/items";
 import { PARTY_NAME_LENGTH } from "@/lib/db/schema";
-import type { CatalogClass, CatalogSkill } from "@/lib/party/catalog";
-import type { SlotDefinition } from "@/lib/party/slots";
+import type { CatalogItem } from "@/lib/party/catalog";
 import type { PartySnapshot } from "@/lib/party/snapshot";
 import { memberStats, moveInList } from "@/lib/party/stats";
 import { strings } from "@/lib/strings";
+import { BuildView, type BuildCatalog } from "../build/build-view";
 import { AddMemberForm, type NewMember } from "./add-member-form";
 import { CompositionCards } from "./composition-cards";
 import styles from "./party.module.css";
 import { Roster, type RosterEntry } from "./roster";
 import { useParty, type SaveStatus } from "./use-party";
 
-export interface PartyViewCatalog {
-  classes: CatalogClass[];
-  slots: SlotDefinition[];
-  skills: CatalogSkill[];
+export interface PartyViewCatalog extends BuildCatalog {
   missing: string[];
 }
 
@@ -83,16 +81,33 @@ function EmptyRoster({ canEdit, onAdd }: { canEdit: boolean; onAdd: () => void }
 export function PartyView({
   initial,
   catalog,
+  initialItems,
   canEdit,
 }: {
   initial: PartySnapshot;
   catalog: PartyViewCatalog;
+  initialItems: CatalogItem[];
   canEdit: boolean;
 }) {
   const { snapshot, saveStatus, notice, submit, dismissNotice } = useParty(initial);
   const [adding, setAdding] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const [openMemberId, setOpenMemberId] = useState<string | null>(null);
+  const [items, setItems] = useState(() => new Map(initialItems.map((item) => [item.id, item])));
   const { members } = snapshot;
+  const openMember = members.find((member) => member.id === openMemberId);
+  const requestedItems = useRef(new Set(initialItems.map((item) => item.id)));
+
+  useEffect(() => {
+    const missing = [...new Set(members.flatMap((member) => member.equipment.map((entry) => entry.itemId)))].filter(
+      (id) => !requestedItems.current.has(id),
+    );
+    if (missing.length === 0) return;
+    missing.forEach((id) => requestedItems.current.add(id));
+    void loadItemsAction({ partyId: snapshot.id, itemIds: missing }).then((loaded) =>
+      setItems((current) => new Map([...current, ...loaded.map((item) => [item.id, item] as const)])),
+    );
+  }, [members, snapshot.id]);
 
   const entries = useMemo<RosterEntry[]>(() => {
     const classById = new Map(catalog.classes.map((entry) => [entry.id, entry]));
@@ -132,8 +147,8 @@ export function PartyView({
     }));
   }
 
-  return (
-    <div className={styles.screen}>
+  const banners = (
+    <>
       {catalog.missing.length > 0 && (
         <div className={styles.notice} role="status">
           {strings.party.catalogMissing}
@@ -147,6 +162,41 @@ export function PartyView({
           </button>
         </div>
       )}
+      <span className={styles.saveStatus} aria-live="polite">
+        {SAVE_LABELS[saveStatus]}
+      </span>
+      <div aria-live="polite" className={styles.visuallyHidden}>
+        {announcement}
+      </div>
+    </>
+  );
+
+  if (openMember) {
+    return (
+      <div className={styles.screen}>
+        {banners}
+        <BuildView
+          snapshot={snapshot}
+          memberId={openMember.id}
+          catalog={catalog}
+          items={items}
+          canEdit={canEdit}
+          submit={submit}
+          rememberItem={(item) => {
+            requestedItems.current.add(item.id);
+            setItems((current) => new Map(current).set(item.id, item));
+          }}
+          announce={setAnnouncement}
+          onBack={() => setOpenMemberId(null)}
+          onOpenMember={setOpenMemberId}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.screen}>
+      {banners}
       <div className={styles.titleRow}>
         <div className={styles.titleBlock}>
           <label htmlFor="party-name" className={styles.eyebrow}>
@@ -164,9 +214,6 @@ export function PartyView({
           </div>
         </div>
         <div className={styles.buttonRow}>
-          <span className={styles.saveStatus} aria-live="polite">
-            {SAVE_LABELS[saveStatus]}
-          </span>
           {canEdit && catalog.classes.length > 0 && (
             <button type="button" className={styles.primaryButton} onClick={() => setAdding(true)}>
               {strings.party.addMember}
@@ -184,12 +231,14 @@ export function PartyView({
       {members.length === 0 ? (
         <EmptyRoster canEdit={canEdit && catalog.classes.length > 0} onAdd={() => setAdding(true)} />
       ) : (
-        <Roster entries={entries} canEdit={canEdit} onMove={moveMember} onRemove={removeMember} />
+        <Roster
+          entries={entries}
+          canEdit={canEdit}
+          onMove={moveMember}
+          onRemove={removeMember}
+          onOpen={setOpenMemberId}
+        />
       )}
-
-      <div aria-live="polite" className={styles.visuallyHidden}>
-        {announcement}
-      </div>
     </div>
   );
 }

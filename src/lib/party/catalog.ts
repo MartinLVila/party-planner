@@ -111,6 +111,16 @@ export async function loadPartyCatalog(db: AnyDatabase): Promise<PartyCatalog> {
   };
 }
 
+export async function findSlot(db: AnyDatabase, slotPos: number): Promise<SlotDefinition | null> {
+  const run = await activeRunId(db, "character_sample");
+  if (run === null) return null;
+  const observed = await db
+    .select({ slotPos: equipmentSlots.slotPos, slotPosName: equipmentSlots.slotPosName })
+    .from(equipmentSlots)
+    .where(eq(equipmentSlots.runId, run));
+  return defineSlots(observed).find((slot) => slot.slotPos === slotPos) ?? null;
+}
+
 const itemColumns = {
   id: items.id,
   name: items.name,
