@@ -37,3 +37,25 @@
   border-radius: 8px;
   color: var(--text-faint);
 }
+
+.wide {
+  flex: 1;
+  width: 100%;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 22px var(--page-gutter) 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.settings {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 16px;
+}
+
+.settings summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}

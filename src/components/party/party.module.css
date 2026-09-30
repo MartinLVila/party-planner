@@ -1,0 +1,437 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.eyebrow {
+  font: 500 11px var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.titleInput {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: -7px;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  width: 100%;
+  max-width: 520px;
+}
+
+.titleInput:hover {
+  border-color: var(--border);
+}
+
+.titleInput:focus-visible {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+.titleStatic {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.faint {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.primaryButton {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--text);
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 500;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.primaryButton:disabled {
+  opacity: 0.4;
+}
+
+.ghostButton {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+}
+
+.composition {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.roleCard {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.roleCard[data-missing="true"] {
+  border: 1px dashed var(--missing-border);
+}
+
+.roleCount {
+  font: 500 22px var(--font-mono), monospace;
+}
+
+.roleCard[data-missing="true"] .roleCount,
+.gapText[data-missing="true"],
+.missingNote {
+  color: var(--missing-text);
+}
+
+.gapText {
+  font-size: 14px;
+  color: var(--done);
+  text-wrap: pretty;
+}
+
+.missingNote {
+  font-size: 12px;
+}
+
+.countLine {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.addForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  padding: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.addField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 150px;
+}
+
+.addField:first-child {
+  flex: 2 1 200px;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.control {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg);
+}
+
+.control option {
+  background: var(--surface);
+}
+
+.buttonRow {
+  display: flex;
+  gap: 8px;
+}
+
+.empty {
+  padding: 56px 20px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.emptyBody {
+  color: var(--text-muted);
+  max-width: 420px;
+  text-wrap: pretty;
+}
+
+.roster {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  padding: 10px 14px 10px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.row[data-dragging="true"] {
+  opacity: 0.45;
+}
+
+.row[data-drop="before"] {
+  box-shadow: inset 0 2px 0 var(--text);
+}
+
+.row[data-drop="after"] {
+  box-shadow: inset 0 -2px 0 var(--text);
+}
+
+.handleGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.handle {
+  width: 28px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: grab;
+  font-size: 15px;
+  letter-spacing: -2px;
+  border-radius: 4px;
+}
+
+.handle:hover {
+  color: var(--text);
+  background: #1f2329;
+}
+
+.arrows {
+  display: flex;
+  flex-direction: column;
+}
+
+.arrow {
+  width: 24px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 9px;
+}
+
+.arrow:hover:not(:disabled) {
+  color: var(--text);
+}
+
+.arrow:disabled {
+  opacity: 0.25;
+}
+
+.position {
+  font: 500 13px var(--font-mono), monospace;
+  color: var(--text-faint);
+  width: 18px;
+  text-align: right;
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: repeating-linear-gradient(135deg, #1c2025 0 4px, #20252a 4px 8px);
+  display: grid;
+  place-items: center;
+  font: 500 10px var(--font-mono), monospace;
+  color: #8a919b;
+}
+
+.memberName {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.memberMeta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.rolePill {
+  padding: 1px 7px;
+  border-radius: 99px;
+  border: 1px solid var(--border-strong);
+  font-size: 11.5px;
+  color: var(--text-soft);
+}
+
+.stats {
+  flex: 3 1 360px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 14px;
+  min-width: 0;
+}
+
+.statLabel {
+  font: 500 10.5px var(--font-mono), monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.statValue {
+  font: 500 15px var(--font-mono), monospace;
+}
+
+.statNote {
+  font-size: 12px;
+  color: var(--missing-text);
+}
+
+.statNote[data-complete="true"] {
+  color: var(--done);
+}
+
+.gearBar {
+  display: flex;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: var(--border);
+  margin-top: 4px;
+  gap: 1px;
+}
+
+.gearAcquired {
+  background: var(--done);
+}
+
+.gearPlanned {
+  background: oklch(0.55 0.02 250);
+}
+
+.rowActions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.removeButton {
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 13px;
+}
+
+.removeButton:hover {
+  color: var(--text);
+}
+
+.removeButton[data-confirming="true"] {
+  border-color: var(--missing-border);
+  color: var(--missing-text);
+}
+
+.notice {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid oklch(0.4 0.09 22);
+  background: oklch(0.25 0.05 22);
+}
+
+.notice button {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid oklch(0.5 0.09 22);
+  background: transparent;
+}
+
+.saveStatus {
+  font: 400 12px var(--font-mono), monospace;
+  color: var(--text-faint);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.identityText {
+  min-width: 0;
+}
