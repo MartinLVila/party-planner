@@ -16,8 +16,9 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+const bytea = customType<{ data: Buffer; driverData: Uint8Array }>({
   dataType: () => "bytea",
+  fromDriver: (value) => Buffer.from(value),
 });
 
 export const SYNC_KINDS = ["classes", "items", "character_sample"] as const;
@@ -206,6 +207,12 @@ export const partyPasswordThrottle = pgTable("party_password_throttle", {
   failures: integer("failures").notNull().default(0),
   windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull().defaultNow(),
   lockedUntil: timestamp("locked_until", { withTimezone: true }),
+});
+
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  attempts: integer("attempts").notNull().default(0),
+  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const partyRevisions = pgTable(

@@ -18,6 +18,11 @@ const strictTransportSecurity = {
   value: "max-age=63072000; includeSubDomains; preload",
 };
 
+const privatePage = [
+  { key: "Cache-Control", value: "private, no-store, max-age=0" },
+  { key: "X-Robots-Tag", value: "noindex, nofollow" },
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: {
@@ -34,7 +39,11 @@ const nextConfig: NextConfig = {
   async headers() {
     const headers =
       process.env.NODE_ENV === "production" ? [...securityHeaders, strictTransportSecurity] : securityHeaders;
-    return [{ source: "/:path*", headers }];
+    return [
+      { source: "/:path*", headers },
+      { source: "/p", headers: privatePage },
+      { source: "/p/:path*", headers: privatePage },
+    ];
   },
 };
 
