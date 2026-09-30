@@ -86,7 +86,7 @@ export const classes = pgTable(
     runId: runId(),
     id: integer("id").notNull(),
     name: text("name").notNull(),
-    description: text("description").notNull(),
+    displayName: text("display_name").notNull(),
     skillPointCap: integer("skill_point_cap"),
   },
   (table) => [primaryKey({ columns: [table.runId, table.id] })],
@@ -124,6 +124,7 @@ export const items = pgTable(
     gradeId: text("grade_id").notNull(),
     categoryName: text("category_name").notNull(),
     options: text("options").array().notNull(),
+    description: text("description"),
     tradable: boolean("tradable").notNull(),
   },
   (table) => [
